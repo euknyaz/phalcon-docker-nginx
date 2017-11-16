@@ -8,6 +8,7 @@ $app->get(
     "/",
     function () {
         echo "<h1>Your dockerized phalcon app!</h1>";
+	echo "<h2>Phalcon version:".Phalcon\Version::get()."</h2>";
         phpinfo();
     }
 );
