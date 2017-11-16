@@ -61,7 +61,7 @@ Create file ./html/index.php with content:
 ```php
 <?php phpinfo(); ?>
 ```
-Check http://localhost:8888 to see phpinfo output.
+Check http://localhost:9000 to see phpinfo output.
 
 ### Stop the container
 ```bash
