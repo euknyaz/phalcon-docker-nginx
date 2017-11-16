@@ -59,5 +59,5 @@ COPY build/php.ini /etc/php/7.1/fpm/php.ini
 
 ADD src /var/www/html
 
-EXPOSE 80 443
+EXPOSE 80 81 82 83 84 85 443
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

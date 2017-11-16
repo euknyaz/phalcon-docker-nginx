@@ -50,6 +50,7 @@ docker exec -it web bash
 If you want map /var/www/html dir to your local dir ./html outside of container
 then run edit docker-compose.yml and uncomment the following line:
 ```
+#     volumes:
 #       - ./html:/var/www/html
 ```
 and restart container with the following commands(it's safe and should not affect your files):
