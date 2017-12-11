@@ -16,7 +16,7 @@ RUN	\
 	&&	apt-get update --fix-missing
 
 RUN \
-  	apt-get install -y \
+  	apt-get install -y --fix-missing \
 	    php7.1 \
 	    php7.1-bcmath \
 	    php7.1-cli \
@@ -32,6 +32,10 @@ RUN \
 	    php7.1-opcache \
 	    php7.1-pdo \
 	    php7.1-xml \
+	    php7.1-mcrypt \
+	    php7.1-curl \
+	    php7.1-zip \
+	    php7.1-soap \
 	    php7.1-phalcon
 
 RUN curl -sS https://getcomposer.org/installer | php
@@ -40,8 +44,6 @@ RUN service php7.1-fpm start
 
 RUN \
   	apt-get install -y \
-	    nodejs \
-	    npm \
 	    git
 
 RUN \
