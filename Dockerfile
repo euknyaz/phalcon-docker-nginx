@@ -8,7 +8,8 @@ RUN curl -s http://nginx.org/keys/nginx_signing.key >/tmp/nginx_signing.key
 RUN apt-key add /tmp/nginx_signing.key
 
 RUN apt-get install -y python-software-properties
-RUN add-apt-repository -y ppa:ondrej/php
+RUN apt-get install -y language-pack-en-base
+RUN LC_ALL=en_US.UTF-8 add-apt-repository -y ppa:ondrej/php
 
 RUN	\
 	apt-get update \
@@ -36,7 +37,9 @@ RUN \
 	    php7.1-curl \
 	    php7.1-zip \
 	    php7.1-soap \
-	    php7.1-phalcon
+	    php7.1-phalcon \
+			php-igbinary \
+			php-redis
 
 RUN curl -sS https://getcomposer.org/installer | php
 RUN mv composer.phar /usr/local/bin/composer
@@ -49,6 +52,7 @@ RUN \
 RUN \
   	apt-get install -y \
 	    nginx-full \
+			redis-server \
 	    supervisor
 
 RUN apt-get clean
@@ -58,8 +62,11 @@ COPY build/.bashrc /root/.bashrc
 COPY build/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY build/nginx.conf /etc/nginx/sites-enabled/default
 COPY build/php.ini /etc/php/7.1/fpm/php.ini
+COPY build/redis.conf /etc/redis/redis.conf
+COPY build/sysctl.conf /etc/sysctl.conf
+COPY build/start.sh /bin/start.sh
 
 ADD src /var/www/html
 
-EXPOSE 80 81 82 83 84 85 443
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+EXPOSE 80 81 82 83 84 85 443 6379
+CMD ["start.sh"]
