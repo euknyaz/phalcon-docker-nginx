@@ -1,0 +1,83 @@
+FROM phusion/baseimage
+
+RUN curl -s https://packagecloud.io/install/repositories/phalcon/stable/script.deb.sh | bash
+
+RUN echo deb http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
+RUN echo deb-src http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
+RUN curl -s http://nginx.org/keys/nginx_signing.key >/tmp/nginx_signing.key
+RUN apt-key add /tmp/nginx_signing.key
+
+RUN apt-get install -y python-software-properties
+RUN apt-get install -y language-pack-en-base
+RUN LC_ALL=en_US.UTF-8 add-apt-repository -y ppa:ondrej/php
+
+RUN	apt-get update
+RUN	apt-get -y upgrade \
+	&& apt-get update --fix-missing
+
+RUN \
+  	apt-get install -y --fix-missing \
+	    php7.1 \
+	    php7.1-bcmath \
+	    php7.1-cli \
+	    php7.1-common \
+	    php7.1-fpm \
+	    php7.1-gd \
+	    php7.1-gmp \
+	    php7.1-intl \
+	    php7.1-json \
+	    php7.1-mbstring \
+	    php7.1-mcrypt \
+	    php7.1-mysqlnd \
+	    php7.1-opcache \
+	    php7.1-pdo \
+	    php7.1-xml \
+	    php7.1-mcrypt \
+	    php7.1-curl \
+	    php7.1-zip \
+	    php7.1-soap \
+	    php7.1-phalcon \
+            php-igbinary \
+            php-redis \
+	    php7.1-xdebug
+
+RUN echo "xdebug.remote_enable=on" >> /etc/php/7.1/fpm/conf.d/20-xdebug.ini \
+ && echo "xdebug.remote_autostart=off" >> /etc/php/7.1/fpm/conf.d/20-xdebug.ini
+
+RUN curl -sS https://getcomposer.org/installer | php
+RUN mv composer.phar /usr/local/bin/composer
+RUN service php7.1-fpm start
+
+RUN \
+  	apt-get install -y \
+	    git
+
+RUN     apt-get remove -y sendmail
+
+RUN     rm -rf /etc/mail
+
+RUN \
+  	apt-get install -y \
+	    nginx-full \
+	    redis-server \
+	    postfix \
+	    libsasl2-modules \
+	    syslog-ng-core \
+	    supervisor
+
+RUN apt-get clean
+RUN apt-get autoclean
+
+COPY build/.bashrc /root/.bashrc
+COPY build/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY build/nginx.conf /etc/nginx/sites-enabled/default
+COPY build/php.ini /etc/php/7.1/fpm/php.ini
+COPY build/redis.conf /etc/redis/redis.conf
+COPY build/sysctl.conf /etc/sysctl.conf
+COPY build/start.sh /bin/start.sh
+COPY build/syslog-ng.conf /etc/syslog-ng/syslog-ng.conf
+
+ADD src /var/www/html
+
+EXPOSE 80 81 82 83 84 85 443 6379
+CMD ["start.sh"]
