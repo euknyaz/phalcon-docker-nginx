@@ -1,11 +1,14 @@
 FROM phusion/baseimage
 
-RUN curl -s https://packagecloud.io/install/repositories/phalcon/stable/script.deb.sh | bash
+# skip phalcon
+# RUN curl -s https://packagecloud.io/install/repositories/phalcon/stable/script.deb.sh | bash
 
 RUN echo deb http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
 RUN echo deb-src http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
 RUN curl -s http://nginx.org/keys/nginx_signing.key >/tmp/nginx_signing.key
 RUN apt-key add /tmp/nginx_signing.key
+
+RUN	apt-get update
 
 RUN apt-get install -y python-software-properties
 RUN apt-get install -y language-pack-en-base
@@ -37,23 +40,30 @@ RUN \
 	    php7.1-curl \
 	    php7.1-zip \
 	    php7.1-soap \
-	    php7.1-phalcon \
-			php-igbinary \
-			php-redis
+	    php7.1-pgsql \
+  	    php-igbinary \
+	    php-redis
+
+# skip-ext
+#	    php7.1-phalcon \
+           
 
 RUN curl -sS https://getcomposer.org/installer | php
 RUN mv composer.phar /usr/local/bin/composer
 RUN service php7.1-fpm start
 
-RUN \
-  	apt-get install -y \
+RUN apt-get install -y \
 	    git
 
-RUN \
-  	apt-get install -y \
+# libnginx-mod-http-lua 
+RUN apt-get install -y \
 	    nginx-full \
-			redis-server \
+	    redis-server \
 	    supervisor
+
+RUN apt-get install -y \
+	    postgresql \
+            postgresql-contrib
 
 # Install NodeJS / Yarn / Lessc
 
