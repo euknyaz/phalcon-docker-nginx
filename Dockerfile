@@ -3,24 +3,77 @@ FROM phusion/baseimage
 # skip phalcon
 # RUN curl -s https://packagecloud.io/install/repositories/phalcon/stable/script.deb.sh | bash
 
-RUN echo deb http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
-RUN echo deb-src http://nginx.org/packages/mainline/ubuntu/ xenial nginx >>/etc/apt/sources.list
+RUN echo deb http://nginx.org/packages/ubuntu/ xenial nginx >>/etc/apt/sources.list
+RUN echo deb-src http://nginx.org/packages/ubuntu/ xenial nginx >>/etc/apt/sources.list
 RUN curl -s http://nginx.org/keys/nginx_signing.key >/tmp/nginx_signing.key
 RUN apt-key add /tmp/nginx_signing.key
 
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys DE742AFA
+## RUN echo deb-src http://nginx.org/packages/mainline/debian/ xenial nginx > /etc/apt/sources.list.d/maxmind.list
+## RUN echo deb http://ppa.launchpad.net/maxmind/ppa/ubuntu xenial main > /etc/apt/sources.list.d/maxmind.list
+
+RUN LC_ALL=en_US.UTF-8 add-apt-repository -y ppa:ondrej/php
+
 RUN	apt-get update
+## RUN	apt-get -y upgrade 
+RUN	apt-get update --fix-missing
 
 RUN apt-get install -y python-software-properties
 RUN apt-get install -y language-pack-en-base
-RUN LC_ALL=en_US.UTF-8 add-apt-repository -y ppa:ondrej/php
 
-RUN	\
-	apt-get update \
-	&&	apt-get -y upgrade \
-	&&	apt-get update --fix-missing
 
-RUN \
-  	apt-get install -y --fix-missing \
+RUN apt-get install -y --fix-missing libmaxminddb0 libmaxminddb-dev mmdb-bin
+
+# Installing nginx
+ENV NGINX_VERSION=1.14.2-1~xenial
+ENV NGINX_DIR=1.14.2
+
+RUN apt-get install -y --fix-missing git dpkg-dev
+RUN apt-get install -y --fix-missing nginx=${NGINX_VERSION}
+
+# Install LuaJIT/OpenResty
+## RUN apt-get install -y --fix-missing luajit libluajit-5.1-common libluajit-5.1-dev
+ENV LUAJIT2_VERSION 2.1-20190221
+RUN set -x \
+  && apt-get install -y --fix-missing build-essential \
+  && cd /usr/src \
+  && curl -k -s -L https://github.com/openresty/luajit2/archive/v${LUAJIT2_VERSION}.tar.gz > luajit2-${LUAJIT2_VERSION}.tar.gz \
+  && tar -xzvf luajit2-${LUAJIT2_VERSION}.tar.gz \
+  && cd luajit2-${LUAJIT2_VERSION} \
+  && make -j2 \
+  && make install
+
+# Install nginx extension for GeoIP2. See: https://github.com/leev/ngx_http_geoip2_module
+# We have to recompile nginx. To keep things simple we use the deb file + the same compile options as before.
+#
+# NGINX_VERSION is coming from the base container
+#
+# FIXME: use nginx -V to use current compile options
+#        NGINX_OPTIONS=$(2>&1 nginx -V | grep 'configure arguments' | awk -F: '{print $2}') \
+RUN set -x \
+  && cd /usr/src \
+  && git clone https://github.com/leev/ngx_http_geoip2_module \
+  && git clone https://github.com/yaoweibin/ngx_http_substitutions_filter_module \
+  && git clone https://github.com/openresty/lua-nginx-module \
+  && DEBIAN_FRONTEND=noninteractive apt-get update \
+  && apt-get source nginx=${NGINX_VERSION} \
+  && apt-get install -y --fix-missing libpcre3-dev zlib1g-dev libssl-dev libxml2-dev \
+     libxslt-dev libgd3 libgd-dev libgeoip1 libgeoip-dev geoip-bin libxml2 libxml2-dev libxslt1.1 libxslt1-dev \
+  && cd nginx-${NGINX_DIR} \
+  && export LUAJIT_LIB=/usr/local/lib \
+  && export LUAJIT_INC=/usr/local/include/luajit-2.1 \
+  && ./configure \
+    --prefix=/etc/nginx --sbin-path=/usr/sbin/nginx --modules-path=/usr/lib/nginx/modules --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --pid-path=/var/run/nginx.pid --lock-path=/var/run/nginx.lock --http-client-body-temp-path=/var/cache/nginx/client_temp --http-proxy-temp-path=/var/cache/nginx/proxy_temp --http-fastcgi-temp-path=/var/cache/nginx/fastcgi_temp --http-uwsgi-temp-path=/var/cache/nginx/uwsgi_temp --http-scgi-temp-path=/var/cache/nginx/scgi_temp --user=nginx --group=nginx --with-compat --with-file-aio --with-threads --with-http_addition_module --with-http_auth_request_module --with-http_dav_module --with-http_flv_module --with-http_gunzip_module --with-http_gzip_static_module --with-http_mp4_module --with-http_random_index_module --with-http_realip_module --with-http_secure_link_module --with-http_slice_module --with-http_ssl_module --with-http_stub_status_module --with-http_sub_module --with-http_v2_module --with-mail --with-mail_ssl_module --with-stream --with-stream_realip_module --with-stream_ssl_module --with-stream_ssl_preread_module --with-cc-opt='-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -fPIE' --with-ld-opt='-Wl,-Bsymbolic-functions -Wl,-z,relro -Wl,-z,now -Wl,--as-needed -pie' \
+    --add-module=/usr/src/ngx_http_geoip2_module \
+    --add-module=/usr/src/ngx_http_substitutions_filter_module \
+    --add-module=/usr/src/lua-nginx-module \
+  && make \
+  && make install \
+  && strip /usr/sbin/nginx* \
+  && rm -rf /usr/src/*
+
+# Install NodeJS / Yarn / Lessc
+RUN     apt-get install -y --fix-missing \
 	    php7.1 \
 	    php7.1-bcmath \
 	    php7.1-cli \
@@ -52,20 +105,14 @@ RUN curl -sS https://getcomposer.org/installer | php
 RUN mv composer.phar /usr/local/bin/composer
 RUN service php7.1-fpm start
 
-RUN apt-get install -y \
-	    git
-
 # libnginx-mod-http-lua 
 RUN apt-get install -y \
-	    nginx-full \
 	    redis-server \
 	    supervisor
 
 RUN apt-get install -y \
 	    postgresql \
             postgresql-contrib
-
-# Install NodeJS / Yarn / Lessc
 
 # gpg keys listed at https://github.com/nodejs/node#release-team
 RUN set -ex \
@@ -130,9 +177,13 @@ RUN yarn global add less-plugin-clean-css
 # end of Install NodeJS / Yarn / Lessc
 RUN apt-get clean
 RUN apt-get autoclean
+RUN apt-get remove --purge -y \
+    build-essential \
+    dpkg-dev
 
 COPY build/.bashrc /root/.bashrc
 COPY build/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY build/nginx_main.conf /etc/nginx/nginx.conf
 COPY build/nginx.conf /etc/nginx/sites-enabled/default
 COPY build/php.ini /etc/php/7.1/fpm/php.ini
 COPY build/redis.conf /etc/redis/redis.conf
