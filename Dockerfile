@@ -15,42 +15,41 @@ RUN apt-get install -y language-pack-en-base
 RUN LC_ALL=en_US.UTF-8 add-apt-repository -y ppa:ondrej/php
 
 RUN	\
-	apt-get update \
-	&&	apt-get -y upgrade \
-	&&	apt-get update --fix-missing
+	apt-get -o Dpkg::Options::="--force-confnew"  -y update \
+	&&	apt-get -o Dpkg::Options::="--force-confnew"  -y upgrade \
+	&&	apt-get -o Dpkg::Options::="--force-confnew"  -y update --fix-missing
 
 RUN \
-  	apt-get install -y --fix-missing \
-	    php7.1 \
-	    php7.1-bcmath \
-	    php7.1-cli \
-	    php7.1-common \
-	    php7.1-fpm \
-	    php7.1-gd \
-	    php7.1-gmp \
-	    php7.1-intl \
-	    php7.1-json \
-	    php7.1-mbstring \
-	    php7.1-mcrypt \
-	    php7.1-mysqlnd \
-	    php7.1-opcache \
-	    php7.1-pdo \
-	    php7.1-xml \
-	    php7.1-mcrypt \
-	    php7.1-curl \
-	    php7.1-zip \
-	    php7.1-soap \
-	    php7.1-pgsql \
+  	apt-get install -yf --fix-missing \
+	    php7.3 \
+	    php7.3-bcmath \
+	    php7.3-cli \
+	    php7.3-common \
+	    php7.3-fpm \
+	    php7.3-gd \
+	    php7.3-gmp \
+	    php7.3-intl \
+	    php7.3-json \
+	    php7.3-mbstring \
+	    php7.3-mysqlnd \
+	    php7.3-opcache \
+	    php7.3-pdo \
+	    php7.3-xml \
+	    php7.3-curl \
+	    php7.3-zip \
+	    php7.3-soap \
+	    php7.3-pgsql \
   	    php-igbinary \
 	    php-redis
 
 # skip-ext
+#	    php7.3-mcrypt \
 #	    php7.1-phalcon \
            
 
 RUN curl -sS https://getcomposer.org/installer | php
 RUN mv composer.phar /usr/local/bin/composer
-RUN service php7.1-fpm start
+RUN service php7.3-fpm start
 
 RUN apt-get install -y \
 	    git
@@ -59,11 +58,13 @@ RUN apt-get install -y \
 RUN apt-get install -y \
 	    nginx-full \
 	    redis-server \
+	    redis-tools \
 	    supervisor
 
 RUN apt-get install -y \
 	    postgresql \
-            postgresql-contrib
+            postgresql-contrib \
+	    mysql-client
 
 # Install NodeJS / Yarn / Lessc
 
@@ -134,10 +135,15 @@ RUN apt-get autoclean
 COPY build/.bashrc /root/.bashrc
 COPY build/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY build/nginx.conf /etc/nginx/sites-enabled/default
-COPY build/php.ini /etc/php/7.1/fpm/php.ini
+COPY build/php.ini /etc/php/7.3/fpm/php.ini
 COPY build/redis.conf /etc/redis/redis.conf
 COPY build/sysctl.conf /etc/sysctl.conf
 COPY build/start.sh /bin/start.sh
+
+RUN ln -s /var/run/php/php7.3-fpm.sock /var/run/php/php7.1-fpm.sock && \
+    mkdir -p /etc/php/7.1/fpm/pool.d && \
+    ln -s /etc/php/7.3/fpm /etc/php/7.1/fpm && \
+    ln -s /etc/php/7.3/fpm/pool.d etc/php/7.1/fpm/pool.d
 
 ADD src /var/www/html
 
